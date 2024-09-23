@@ -19,6 +19,7 @@ mod actions {
     use octoguns::lib::simulate::{simulate_bullets};
     use starknet::{ContractAddress, get_caller_address};
     use core::cmp::{max, min};
+    use octoguns::models::quadtree::{Quadtree, QuadtreeTrait};
 
 
     #[abi(embed_v0)]
@@ -60,6 +61,7 @@ mod actions {
             let mut player_position = get!(world, player_character_id, (CharacterPosition));
             let mut opp_position = get!(world, opp_character_id, (CharacterPosition));
             let mut positions = array![player_position, opp_position];
+            let mut quadtree = get!(world, session_id, (Quadtree));
 
             let mut bullets = get_all_bullets(world, session_id);
             
@@ -101,7 +103,7 @@ mod actions {
                 }
 
                 //advance bullets + check collisions
-                let (new_bullets, dead_characters) = simulate_bullets(ref bullets, ref positions, @map, sub_move_index);
+                let (new_bullets, dead_characters) = simulate_bullets(ref bullets, world, ref quadtree, session_meta.turn_count * 100 + sub_move_index);
                 updated_bullet_ids = new_bullets;
 
                 let (new_positions, mut filtered_character_ids) = filter_out_dead_characters(ref positions, dead_characters);

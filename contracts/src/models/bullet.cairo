@@ -66,84 +66,6 @@ impl BulletImpl of BulletTrait {
         
     }
 
-    fn simulate(ref self: Bullet, characters: @Array<CharacterPosition>, map: @Map, step: u32) -> (Option<u32>, bool) {
-        let maybe_position = self.get_position(step);
-        let mut position: Vec2 = Vec2 { x: 0, y: 0 };
-
-        match maybe_position {
-            Option::None => {
-                return (Option::None(()), true);
-            },
-            Option::Some(p) => {
-                position = p;
-            }
-        }
-
-        let (hit_character, hit_object) = self.compute_hits(position, characters, map);
-
-        match hit_character {
-            Option::Some(character_id) => {
-                return (Option::Some(character_id), true);
-            },
-            Option::None => {
-                return (Option::None(()), hit_object);
-            }
-        }
-
-    }
-
-    fn compute_hits(ref self: Bullet, position: Vec2, characters: @Array<CharacterPosition>, map: @Map) -> (Option<u32>, bool) {
-        let mut character_index: u32 = 0;
-        let mut character_id = 0;
-        let OFFSET: u64 = 1000;
-        let mut dropped: bool = false;
-        
-        loop {
-            if character_index >= characters.len() {
-                break;
-            }
-
-            let character = *characters.at(character_index);
-
-            //plus 1000 offset to to avoid underflow
-            let lower_bound_x = character.coords.x + OFFSET - 500;
-            let upper_bound_x = character.coords.x + OFFSET + 500;
-            let lower_bound_y = character.coords.y + OFFSET - 500;
-            let upper_bound_y = character.coords.y + OFFSET + 500;
-
-            //plus 1000 offset to to match bounds offset            
-            if (position.x + OFFSET > lower_bound_x && position.x + OFFSET < upper_bound_x &&
-                position.y + OFFSET > lower_bound_y && position.y + OFFSET < upper_bound_y) {
-                    character_id = character.id;
-                    dropped = true;
-                    break;        
-            }
-
-            character_index += 1;
-        };
-
-        let x_index = position.x / 4000;
-        let y_index = position.y / 4000;
-        let index = (x_index + y_index * 25).try_into().unwrap();
-        let mut object_index: u32 = 0;
-        while object_index.into() < map.map_objects.len() {
-            let object = *map.map_objects.at(object_index);
-            if object == index {
-                dropped = true;
-                break;
-            }
-            object_index += 1;
-        };
-
-        //ignore collision with the player that shot the bullet
-        //if hit wall then return no id but true for hit_object
-        if character_id == 0 || character_id == self.shot_by {
-            return (Option::None(()), dropped);
-        }
-
-        (Option::Some(character_id), dropped)
-
-}
 }
 
 
@@ -208,31 +130,6 @@ mod simulate_tests {
 
      }
 
-
-     #[test]
-     fn test_collision_with_character() {
-        let address = starknet::contract_address_const::<0x0>();
-        let map = MapTrait::new_empty(1);
-        let mut bullet = BulletTrait::new(
-            1, 
-            Vec2 {x: 0, y: 0}, 
-            0, 
-            1,
-            0
-        );
-        let characters = array![CharacterPositionTrait::new(69, Vec2 {x: 14, y: 0})];
-        let (hit_character, dropped) = bullet.simulate(@characters, @map, 1);
-        match hit_character {
-            Option::None => {
-                panic!("should return id of hit piece");
-            },
-            Option::Some(id) => {
-                assert!(id == 69, "not returning id of hit piece");
-            }
-        }
-        assert!(dropped, "should return true for hit object");
-     }
-
      #[test]
      fn test_drop_bullet() {
         let address = starknet::contract_address_const::<0x0>();
@@ -259,55 +156,4 @@ mod simulate_tests {
         }
      }
 
-     #[test]
-     fn test_collision_with_object() {
-        let address = starknet::contract_address_const::<0x0>();
-        let map = MapTrait::new(1, MapObjects { objects: array![7]});
-
-        let characters = ArrayTrait::new();
-        let mut bullet = BulletTrait::new(
-            1, 
-            Vec2 { x:30_000, y:0}, 
-            0, 
-            1,
-            0
-        );
-        let (hit_character, dropped) = bullet.simulate(@characters, @map, 1);
-        match hit_character {
-            Option::None => {
-                if !dropped {
-                    panic!("should return true for hit object");
-                }
-            },
-            Option::Some(character_id) => {
-                panic!("bullet should hit wall not character");
-            }
-        }
-     }
-
-     #[test]
-     fn test_collision_with_object_2() {
-        let address = starknet::contract_address_const::<0x0>();
-        let map = MapTrait::new(1, MapObjects { objects: array![7]});
-
-        let characters = ArrayTrait::new();
-        let mut bullet = BulletTrait::new(
-            1, 
-            Vec2 { x:27_850, y:0}, 
-            0, 
-            1,
-            0
-        );
-        let (hit_character, dropped) = bullet.simulate(@characters, @map, 1);
-        match hit_character {
-            Option::None => {
-                if !dropped {
-                    panic!("should return true for hit object");
-                }
-            },
-            Option::Some(character_id) => {
-                panic!("bullet should hit wall not character");
-            }
-        }
-     }
 }

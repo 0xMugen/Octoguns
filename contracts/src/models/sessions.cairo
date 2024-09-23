@@ -38,7 +38,6 @@ pub struct SessionMeta {
     pub turn_count: u32, // mod 2 = 1 is player 2 and mod 2 = 0 is player 1
     pub p1_character: u32,
     pub p2_character: u32 ,
-    pub quadtree_root: u32,
     pub bullets: Array<u32>
 
 }
@@ -51,8 +50,7 @@ impl SessionMetaImpl of SessionMetaTrait {
             turn_count: 0, 
             bullets: ArrayTrait::new(), 
             p1_character: 0,
-            p2_character: 0,
-            quadtree_root: 0
+            p2_character: 0
         }
     }
     fn next_turn(ref self: SessionMeta) {

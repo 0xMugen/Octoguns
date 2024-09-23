@@ -9,13 +9,22 @@ use dojo::world::IWorldDispatcher;
 #[dojo::model]
 struct Quadtree {
     #[key]
-    id: u32,
+    session_id: u32,
     morton_codes: Array<u64>,
     characters: Array<u32>
 }
 
 #[generate_trait]
 impl QuadtreeImpl of QuadtreeTrait {
+
+    fn new(session_id: u32, characters: Array<CharacterPosition>) -> Quadtree {
+        let mut res = Quadtree {session_id, morton_codes: ArrayTrait::new(), characters: ArrayTrait::new()};
+        let mut i = 0;
+        while i < characters.len() {
+            res.insert(*characters[i]);
+        };
+        res
+    }
 
     fn find_insert_index(ref self: Quadtree, morton_code: u64) -> u32 {
         let mut left = 0;
@@ -106,6 +115,7 @@ impl QuadtreeImpl of QuadtreeTrait {
         result
     }
 
+    #[inline]
     fn check_collisions(ref self: Quadtree, coords: Vec2, world: IWorldDispatcher) -> Option<u32> {
         let mut res = Option::None(());
 

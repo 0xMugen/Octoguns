@@ -4,11 +4,14 @@ use octoguns::models::characters::{CharacterPosition, CharacterPositionTrait};
 use alexandria_math::trigonometry::{fast_cos, fast_sin};
 use octoguns::consts::ONE_E_8;
 use octoguns::models::map::{Map, MapTrait};
+use octoguns::models::quadtree::{Quadtree, QuadtreeTrait};
+use dojo::world::IWorldDispatcher;
 
 // Tuple to hold bullet_ids and character_ids to drop
 pub type SimulationResult = (Array<u32>, Array<u32>);
 
-pub fn simulate_bullets(ref bullets: Array<Bullet>, ref character_positions: Array<CharacterPosition>, map: @Map, step: u32) -> SimulationResult {
+#[inline]
+pub fn simulate_bullets(ref bullets: Array<Bullet>, world: IWorldDispatcher, ref quadtree: Quadtree, step: u32) -> SimulationResult {
     let mut updated_bullets = ArrayTrait::new();
     let mut dead_characters_ids = ArrayTrait::new();
 
@@ -17,16 +20,22 @@ pub fn simulate_bullets(ref bullets: Array<Bullet>, ref character_positions: Arr
     loop {
         match cloned_bullets.pop_front() {
             Option::Some(mut bullet) => {
-                let (hit_character, dropped) = bullet.simulate(@character_positions, map, step);
-                match hit_character {
-                    Option::Some(character_id) => {
-                        dead_characters_ids.append(character_id);
-                    },
-                    Option::None => {
-                        if !dropped {
-                            updated_bullets.append(bullet.bullet_id);
+                let maybe_position = bullet.get_position(step);
+                match maybe_position {
+                    Option::Some(v) => {
+                        let maybe_collision = quadtree.check_collisions(v, world);
+                        match maybe_collision {
+                            Option::Some(id) => {
+                                dead_characters_ids.append(id);
+                            },
+                            Option::None => {
+                                updated_bullets.append(bullet.bullet_id);
+                            }
                         }
                     },
+                    Option::None => {
+                        continue;
+                    }
                 }
             },
             Option::None => {break;},

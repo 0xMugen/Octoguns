@@ -47,6 +47,7 @@ const cos_table: [
 // * `u64` - sin(x) * 1e8
 // # Example
 // * fast_sin(3000000000) = (true, 50000000)
+#[inline]
 pub fn fast_sin_unsigned(x: u64) -> (u64, bool) {
     let hollyst: u64 = 1745329_u64;
 
@@ -81,6 +82,7 @@ pub fn fast_sin_unsigned(x: u64) -> (u64, bool) {
 // * `i64` - cos(x) * 1e8
 // # Example
 // * fast_cos(6000000000) = 50000000
+#[inline]
 pub fn fast_cos_unsigned(x: u64) -> (u64, bool) {
     let mut a = x + FAST_90;
     return fast_sin_unsigned(a);
