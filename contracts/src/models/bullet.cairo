@@ -67,7 +67,6 @@ impl BulletImpl of BulletTrait {
     }
 
     fn simulate(ref self: Bullet, characters: @Array<CharacterPosition>, map: @Map, step: u32) -> (Option<u32>, bool) {
-        let mut res: (Option<u32>, bool) = (Option::None(()), false); 
         let maybe_position = self.get_position(step);
         let mut position: Vec2 = Vec2 { x: 0, y: 0 };
 

@@ -13,6 +13,7 @@ mod models {
     mod global;
     mod player;
     mod turndata;
+    mod quadtree;
 }
 
 mod lib {
