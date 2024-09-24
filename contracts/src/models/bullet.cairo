@@ -31,7 +31,8 @@ impl BulletImpl of BulletTrait {
 
     fn get_position(ref self: Bullet, step: u32) -> Option<Vec2> {
         let mut new_coords = self.shot_at;
-        let step_felt: felt252 = step.into();
+        println!("step: {}, shot_step: {}", step, self.shot_step);
+        let step_felt: felt252 = (step - self.shot_step.into()).into();
         let vx: felt252 = self.velocity.x.into();
         let vy: felt252 = self.velocity.y.into();
 
@@ -41,11 +42,13 @@ impl BulletImpl of BulletTrait {
         if self.velocity.xdir {
             new_coords.x += x_shift;
             if new_coords.x > 100_000 {
+                println!("bullet out of bounds x+");
                 return Option::None(());
             }
         }
         else {
             if x_shift > self.shot_at.x {
+                println!("bullet out of bounds x-");
                 return Option::None(());
             }
             new_coords.x -= x_shift;
@@ -53,11 +56,14 @@ impl BulletImpl of BulletTrait {
         if self.velocity.ydir {
             new_coords.y += y_shift;
             if new_coords.y > 100_000 {
+                println!("bullet out of bounds y+");
                 return Option::None(());
             }
         }
         else {
             if y_shift > self.shot_at.y {
+                println!("bullet out of bounds y-");
+                println!("y_shift: {}, shot_at: {}", y_shift, self.shot_at.y);
                 return Option::None(());
             }
             new_coords.y -= y_shift;

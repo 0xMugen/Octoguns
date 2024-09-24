@@ -28,7 +28,9 @@ pub fn simulate_bullets(ref bullets: Array<Bullet>, ref quadtree: Quadtree, step
                             Option::Some(collider) => {
                                 match collider.collider_type {
                                     ColliderType::Character(id) => {
-                                        dead_characters_ids.append(id);
+                                        if id != bullet.shot_by {
+                                            dead_characters_ids.append(id);
+                                        }
                                     },
                                     ColliderType::Wall => {
                                         // drop bullet

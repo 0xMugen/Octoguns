@@ -90,7 +90,7 @@ mod actions {
                                                 Vec2 {x: player_position.coords.x, y: player_position.coords.y}, 
                                                 s.angle, 
                                                 player_character_id,
-                                                (session_meta.turn_count * 100 + step).try_into().unwrap()
+                                                step.try_into().unwrap()
                             );
                             bullets.append(bullet);
                             println!("new bullet at index {}", sub_move_index);

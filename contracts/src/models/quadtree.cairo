@@ -110,9 +110,10 @@ impl QuadtreeImpl of QuadtreeTrait {
         let len = self.morton_codes.len();
         let mut removed = false;
         while i < len {
-            if i == index && *self.morton_codes[i] == morton_code && !removed {
+            if i == index && !removed {
                 match self.colliders[i].collider_type {
                     ColliderType::Character(character_id) => {
+                        println!("removing id: {}", character_id);
                         if id == *character_id {
                             removed = true;
                         }
@@ -132,21 +133,24 @@ impl QuadtreeImpl of QuadtreeTrait {
 
     fn range_query(ref self: Quadtree, query_bounds: (u64, u64, u64, u64)) -> Array<Collider> {
         let (min_x, min_y, max_x, max_y) = query_bounds;
-        let min_code = interleave_bits( Vec2 {x: min_x, y: min_y});
-        let max_code = interleave_bits( Vec2 {x: max_x, y: max_y});
+        let min_code = interleave_bits(Vec2 {x: min_x, y: min_y});
+        let max_code = interleave_bits(Vec2 {x: max_x, y: max_y});
         let mut result = ArrayTrait::new();
 
         // Find the start index using binary search
         let start = self.find_insert_index(min_code);
-        // Find the end index using binary search
-        let end = self.find_insert_index(max_code + 1); // +1 to include max_code
 
         let mut i = start;
-        while i < end && i < self.morton_codes.len() {
-            if *self.morton_codes[i] > max_code {
+        while i < self.morton_codes.len() {
+            let current_code = *self.morton_codes[i];
+            if current_code > max_code {
                 break;
             }
-            result.append(*self.colliders[i]);
+
+            // Check if the current collider overlaps with the query bounds
+            let collider = *self.colliders[i];
+            result.append(collider);
+
             i += 1;
         };
 
@@ -199,17 +203,30 @@ fn interleave_bits(v: Vec2) -> u64 {
 }
 
 fn spread_bits(ref n: u64) -> u64 {
-    n = n & 0xFFFF;
+    n = n & 0xFFFFFFFF; // Use 32 bits instead of 16
     let mut x = n;
-    x = (x | U64BitShift::shl(x, 8)) & 0x00FF00FF;
-    x = (x | U64BitShift::shl(x, 4)) & 0x0F0F0F0F;
-    x = (x | U64BitShift::shl(x, 2)) & 0x33333333;
-    x = (x | U64BitShift::shl(x, 1)) & 0x55555555;
+    x = (x | U64BitShift::shl(x, 16)) & 0x0000FFFF0000FFFF;
+    x = (x | U64BitShift::shl(x, 8))  & 0x00FF00FF00FF00FF;
+    x = (x | U64BitShift::shl(x, 4))  & 0x0F0F0F0F0F0F0F0F;
+    x = (x | U64BitShift::shl(x, 2))  & 0x3333333333333333;
+    x = (x | U64BitShift::shl(x, 1))  & 0x5555555555555555;
     x
+}
+
+fn overlaps(collider: Collider, query_bounds: (u64, u64, u64, u64)) -> bool {
+    let (min_x, min_y, max_x, max_y) = query_bounds;
+    let collider_min_x = collider.position.x - collider.dimensions.x / 2;
+    let collider_max_x = collider.position.x + collider.dimensions.x / 2;
+    let collider_min_y = collider.position.y - collider.dimensions.y / 2;
+    let collider_max_y = collider.position.y + collider.dimensions.y / 2;
+
+    !(collider_max_x < min_x || collider_min_x > max_x || 
+      collider_max_y < min_y || collider_min_y > max_y)
 }
 
 fn is_point_inside_collider(x: u64, y: u64, collider: Collider) -> bool {
     let offset = 1000;
+    println!("x: {}, y: {}, collider.position.x: {}, collider.position.y: {}, collider.dimensions.x: {}, collider.dimensions.y: {}", x, y, collider.position.x, collider.position.y, collider.dimensions.x, collider.dimensions.y);
     x + offset >= collider.position.x + offset - collider.dimensions.x/2
         && x <= collider.position.x + collider.dimensions.x/2
         && y + offset >= collider.position.y + offset - collider.dimensions.y/2
