@@ -19,8 +19,9 @@ struct Quadtree {
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct Collider {
+    id: u32,
     collider_type: ColliderType,
-    postition: Vec2,
+    position: Vec2,
     dimensions: Vec2
 }
 
@@ -40,8 +41,9 @@ impl QuadtreeImpl of QuadtreeTrait {
         while i < characters.len() {
             let collider = Collider {
                 collider_type: ColliderType::Character(*characters[i].id),
-                postition: *characters[i].coords,
-                dimensions: Vec2 {x: 1000, y: 1000}
+                position: *characters[i].coords,
+                dimensions: Vec2 {x: 1000, y: 1000},
+                id: *characters[i].id
             };
             res.insert(collider);
             i +=1;
@@ -49,8 +51,9 @@ impl QuadtreeImpl of QuadtreeTrait {
         while i < map.objects.len() {
             let collider = Collider {
                 collider_type: ColliderType::Wall,
-                postition: map.get_object_coords(i),
-                dimensions: Vec2 {x: 4000, y: 4000}
+                position: map.get_object_coords(i),
+                dimensions: Vec2 {x: 4000, y: 4000},
+                id: 0
             };
             res.insert(collider);
             i +=1;
@@ -74,7 +77,7 @@ impl QuadtreeImpl of QuadtreeTrait {
 
     // Updated insert method using binary search
     fn insert(ref self: Quadtree, object: Collider) {
-        let morton_code = interleave_bits(object.postition);
+        let morton_code = interleave_bits(object.position);
         let index = self.find_insert_index(morton_code);
         let mut new_morton_codes = ArrayTrait::new();
         let mut new_colliders = ArrayTrait::new();
@@ -95,6 +98,35 @@ impl QuadtreeImpl of QuadtreeTrait {
             i = i + 1;
         };
 
+        self.morton_codes = new_morton_codes;
+        self.colliders = new_colliders;
+    }
+
+    fn remove(ref self: Quadtree, position: Vec2,id: u32) {
+        let morton_code = interleave_bits(position);
+        let index = self.find_insert_index(morton_code);
+        let mut new_morton_codes = ArrayTrait::new();
+        let mut new_colliders = ArrayTrait::new();
+        let mut i = 0;
+        let len = self.morton_codes.len();
+        let mut removed = false;
+        while i < len {
+            if i == index && *self.morton_codes[i] == morton_code && !removed {
+                match self.colliders[i].collider_type {
+                    ColliderType::Character(character_id) => {
+                        if id == *character_id {
+                            removed = true;
+                        }
+                    },
+                    _ => {}
+                }
+                // Skip adding this object
+            } else {
+                new_morton_codes.append(*self.morton_codes[i]);
+                new_colliders.append(*self.colliders[i]);
+            }
+            i = i + 1;
+        };
         self.morton_codes = new_morton_codes;
         self.colliders = new_colliders;
     }
@@ -169,10 +201,10 @@ fn spread_bits(ref n: u64) -> u64 {
 
 fn is_point_inside_collider(x: u64, y: u64, collider: Collider) -> bool {
     let offset = 1000;
-    x + offset >= collider.postition.x + offset - 500
-        && x <= collider.postition.x + 500
-        && y + offset >= collider.postition.y + offset - 500
-        && y <= collider.postition.y + 500
+    x + offset >= collider.position.x + offset - 500
+        && x <= collider.position.x + 500
+        && y + offset >= collider.position.y + offset - 500
+        && y <= collider.position.y + 500
 }
 
 

@@ -20,6 +20,7 @@ mod actions {
     use starknet::{ContractAddress, get_caller_address};
     use core::cmp::{max, min};
     use octoguns::models::quadtree::{Quadtree, QuadtreeTrait};
+    use octoguns::models::quadtree::{Collider, ColliderType};
 
 
     #[abi(embed_v0)]
@@ -41,20 +42,20 @@ mod actions {
 
             let mut player_character_id = 0;
             let mut opp_character_id = 0;
-            let mut turn_player = 0;
+            let mut opp_player = 0;
 
             match session_meta.turn_count % 2 {
                 0 => {
                     assert!(player == session.player1, "not turn player, 1s turn");
                     player_character_id = session_meta.p1_character;
                     opp_character_id = session_meta.p2_character;
-                    turn_player = 1;
+                    opp_player = 1;
                 },
                 1 => {
                     assert!(player == session.player2, "not turn player, 2s turn");
                     player_character_id = session_meta.p2_character;
                     opp_character_id = session_meta.p1_character;
-                    turn_player = 2;
+                    opp_player = 2;
                 },
                 _ => {
                     panic!("???");
@@ -64,7 +65,8 @@ mod actions {
             let mut player_position = get!(world, player_character_id, (CharacterPosition));
             let mut opp_position = get!(world, opp_character_id, (CharacterPosition));
             let mut positions = array![player_position, opp_position];
-            let mut quadtree = get!(world, session_id, (Quadtree));
+            let mut player_quadtree = get!(world, (session_id, player), (Quadtree));
+            let mut opp_quadtree = get!(world, (session_id, opp_player), (Quadtree));
 
             let mut bullets = get_all_bullets(world, session_id);
             
@@ -106,7 +108,7 @@ mod actions {
                 }
 
                 //advance bullets + check collisions
-                let (new_bullets, dead_characters) = simulate_bullets(ref bullets, world, ref quadtree, session_meta.turn_count * 100 + sub_move_index);
+                let (new_bullets, dead_characters) = simulate_bullets(ref bullets, world, ref opp_quadtree, session_meta.turn_count * 100 + sub_move_index);
                 updated_bullet_ids = new_bullets;
 
                 let (new_positions, mut filtered_character_ids) = filter_out_dead_characters(ref positions, dead_characters);
@@ -192,11 +194,19 @@ mod actions {
 
             println!("positions set");
 
+            player_quadtree.remove(player_position.coords, player_character_id);
+            player_quadtree.insert(Collider {
+                id: player_character_id,
+                collider_type: ColliderType::Character(player_character_id),
+                position: player_position.coords,
+                dimensions: Vec2 {x: 1000, y: 1000}
+            });
+
             session_meta.turn_count += 1;
             session_meta.bullets = updated_bullet_ids;
             
 
-            set!(world, (session, session_meta));
+            set!(world, (session, session_meta, player_quadtree));
 
 
         }
