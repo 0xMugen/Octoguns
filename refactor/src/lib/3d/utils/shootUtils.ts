@@ -101,8 +101,8 @@ export function simulate() {
     let newBullets: BulletCoords[] = []
     bullets.map((bullet) => {
       console.log(bullet)
-      const newX = bullet.coords.x + bullet.velocity.x/30
-      const newY = bullet.coords.y + bullet.velocity.y/30
+      const newX = bullet.coords.x + bullet.velocity.x/3
+      const newY = bullet.coords.y + bullet.velocity.y/3
       console.log(newX, newY)
       newBullets.push( {
         ...bullet,

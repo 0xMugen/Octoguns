@@ -21,14 +21,12 @@ export const LayoutDefinition = {
   value: RecsType.String,
 }
 
-
 // Type definition for `octoguns::types::IVec2` struct
 export interface IVec2 {
-  x: Number;
-  y: Number;
-  xdir: Boolean;
-  ydir: Boolean;
-  
+  x: Number
+  y: Number
+  xdir: Boolean
+  ydir: Boolean
 }
 
 export const IVec2Definition = {
@@ -36,23 +34,20 @@ export const IVec2Definition = {
   y: RecsType.Number,
   xdir: RecsType.Boolean,
   ydir: RecsType.Boolean,
-  
-};
+}
 
 export const Vec2Definition = {
   x: RecsType.Number,
   y: RecsType.Number,
 }
 
-
 // Type definition for `octoguns::models::bullet::Bullet` struct
 export interface Bullet {
-  bullet_id: Number;
-  shot_step: Number;
-  shot_by: Number;
-  shot_at: Vec2;
-  velocity: IVec2;
-  
+  bullet_id: Number
+  shot_step: Number
+  shot_by: Number
+  shot_at: Vec2
+  velocity: IVec2
 }
 export const BulletDefinition = {
   bullet_id: RecsType.Number,
@@ -60,9 +55,7 @@ export const BulletDefinition = {
   shot_by: RecsType.Number,
   shot_at: Vec2Definition,
   velocity: IVec2Definition,
-  
-};
-
+}
 
 // Type definition for `core::byte_array::ByteArray` struct
 export interface ByteArray {
@@ -133,14 +126,13 @@ export const GlobalDefinition = {
 
 // Type definition for `octoguns::models::map::Map` struct
 export interface Map {
-  map_id: Number;
-  map_objects: Number[];
-  
+  map_id: Number
+  map_objects: Number[]
 }
 export const MapDefinition = {
   map_id: RecsType.Number,
   map_objects: RecsType.NumberArray,
-};
+}
 // Type definition for `octoguns::models::map::MapObjects` struct
 export interface MapObjects {
   map_object_id: Number
@@ -200,24 +192,24 @@ export function defineContractComponents(world: World) {
     // Model definition for `octoguns::models::bullet::Bullet` model
     Bullet: (() => {
       return defineComponent(
-          world,
-          {
-              bullet_id: RecsType.Number,
-              shot_step: RecsType.Number,
-              shot_by: RecsType.Number,
-              shot_at: Vec2Definition,
-              velocity: IVec2Definition,
+        world,
+        {
+          bullet_id: RecsType.Number,
+          shot_step: RecsType.Number,
+          shot_by: RecsType.Number,
+          shot_at: Vec2Definition,
+          velocity: IVec2Definition,
+        },
+        {
+          metadata: {
+            namespace: 'octoguns',
+            name: 'Bullet',
+            types: ['u32', 'u16', 'u32'],
+            customTypes: ['Vec2', 'IVec2'],
           },
-          {
-              metadata: {
-                  namespace: "octoguns",
-                  name: "Bullet",
-                  types: ["u32", "u16", "u32"],
-                  customTypes: ["Vec2", "IVec2"],
-              },
-          }
-      );
-  })(),
+        }
+      )
+    })(),
 
     // Model definition for `octoguns::models::characters::CharacterModel` model
     CharacterModel: (() => {
@@ -247,14 +239,12 @@ export function defineContractComponents(world: World) {
         {
           id: RecsType.Number,
           coords: Vec2Definition,
-          max_steps: RecsType.Number,
-          current_step: RecsType.Number,
         },
         {
           metadata: {
             namespace: 'octoguns',
             name: 'CharacterPosition',
-            types: ['u32', 'u32', 'u32'],
+            types: ['u32'],
             customTypes: ['Vec2'],
           },
         }
@@ -286,7 +276,7 @@ export function defineContractComponents(world: World) {
         world,
         {
           map_id: RecsType.Number,
-          map_objects: RecsType.NumberArray,
+          objects: RecsType.NumberArray,
         },
         {
           metadata: {

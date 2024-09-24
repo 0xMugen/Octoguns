@@ -28,7 +28,7 @@ fn get_all_bullets(world: IWorldDispatcher, session_id: u32) -> Array<Bullet> {
     return all_live_bullets;
 }
 
-
+#[inline]
 fn filter_out_dead_characters(
     ref all_character_positions: Array<CharacterPosition>, dead_characters: Array<u32>
 ) -> (Array<CharacterPosition>, Array<u32>) {

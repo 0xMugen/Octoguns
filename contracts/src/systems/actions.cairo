@@ -65,8 +65,7 @@ mod actions {
             let mut player_position = get!(world, player_character_id, (CharacterPosition));
             let mut opp_position = get!(world, opp_character_id, (CharacterPosition));
             let mut positions = array![player_position, opp_position];
-            let mut player_quadtree = get!(world, (session_id, player), (Quadtree));
-            let mut opp_quadtree = get!(world, (session_id, opp_player), (Quadtree));
+            let mut quadtree = get!(world, session_id, (Quadtree));
 
             let mut bullets = get_all_bullets(world, session_id);
             
@@ -91,7 +90,7 @@ mod actions {
                                                 Vec2 {x: player_position.coords.x, y: player_position.coords.y}, 
                                                 s.angle, 
                                                 player_character_id,
-                                                step.try_into().unwrap()
+                                                (session_meta.turn_count * 100 + step).try_into().unwrap()
                             );
                             bullets.append(bullet);
                             println!("new bullet at index {}", sub_move_index);
@@ -108,7 +107,7 @@ mod actions {
                 }
 
                 //advance bullets + check collisions
-                let (new_bullets, dead_characters) = simulate_bullets(ref bullets, world, ref opp_quadtree, session_meta.turn_count * 100 + sub_move_index);
+                let (new_bullets, dead_characters) = simulate_bullets(ref bullets, ref quadtree, session_meta.turn_count * 100 + sub_move_index);
                 updated_bullet_ids = new_bullets;
 
                 let (new_positions, mut filtered_character_ids) = filter_out_dead_characters(ref positions, dead_characters);
@@ -194,8 +193,8 @@ mod actions {
 
             println!("positions set");
 
-            player_quadtree.remove(player_position.coords, player_character_id);
-            player_quadtree.insert(Collider {
+            quadtree.remove(player_position.coords, player_character_id);
+            quadtree.insert(Collider {
                 id: player_character_id,
                 collider_type: ColliderType::Character(player_character_id),
                 position: player_position.coords,
@@ -205,8 +204,7 @@ mod actions {
             session_meta.turn_count += 1;
             session_meta.bullets = updated_bullet_ids;
             
-
-            set!(world, (session, session_meta, player_quadtree));
+            set!(world, (session, session_meta, quadtree));
 
 
         }

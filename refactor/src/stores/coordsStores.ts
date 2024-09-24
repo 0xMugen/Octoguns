@@ -41,7 +41,7 @@ export const enemyCharacterCoords = writable<CoordsStore>({})
     }
     playerCharacterCoords.update((store) => {
       return {
-        ...store,
+        ...store, 
         [key]: coords,
       }
     })

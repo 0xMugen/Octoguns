@@ -94,7 +94,7 @@
     ])
     if (map) {
       console.log('map', $map)
-      mapObjects.set({objects: get(map).map_objects})
+      mapObjects.set({objects: get(map).objects})
     }
   }
 

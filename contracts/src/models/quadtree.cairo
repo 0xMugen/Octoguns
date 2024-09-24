@@ -11,8 +11,6 @@ use starknet::ContractAddress;
 struct Quadtree {
     #[key]
     session_id: u32,
-    #[key]
-    player: ContractAddress,
     morton_codes: Array<u64>,
     colliders: Array<Collider>
 }
@@ -35,8 +33,8 @@ enum ColliderType {
 #[generate_trait]
 impl QuadtreeImpl of QuadtreeTrait {
 
-    fn new(session_id: u32, player: ContractAddress, characters: Array<CharacterPosition>, ref map: Map) -> Quadtree {
-        let mut res = Quadtree {session_id, player, morton_codes: ArrayTrait::new(), colliders: ArrayTrait::new()};
+    fn new(session_id: u32, characters: Array<CharacterPosition>, ref map: Map) -> Quadtree {
+        let mut res = Quadtree {session_id, morton_codes: ArrayTrait::new(), colliders: ArrayTrait::new()};
         let mut i = 0;
         while i < characters.len() {
             let collider = Collider {
@@ -48,6 +46,7 @@ impl QuadtreeImpl of QuadtreeTrait {
             res.insert(collider);
             i +=1;
         };
+        i =0;
         while i < map.objects.len() {
             let collider = Collider {
                 collider_type: ColliderType::Wall,
@@ -155,22 +154,32 @@ impl QuadtreeImpl of QuadtreeTrait {
     }
 
     #[inline]
-    fn check_collisions(ref self: Quadtree, coords: Vec2, world: IWorldDispatcher) -> Option<Collider> {
+    fn check_collisions(ref self: Quadtree, coords: Vec2) -> Option<Collider> {
         let mut res = Option::None(());
 
         // Define a small range around the projectile's point
         // Since projectiles are points, the range is just the point itself
+        let mut min_x = 0;
+        let mut min_y = 0;
+        if coords.x > 2000 {
+            min_x = coords.x - 2000;
+        }
+        if coords.y > 2000 {
+            min_y = coords.y - 2000;
+        }
         let query_bounds = (
-            coords.x,
-            coords.y,
-            coords.x,
-            coords.y,
+            min_x,
+            min_y,
+            coords.x + 2000,
+            coords.y + 2000,
         );
         // Perform a range query to find potential colliders
         let potential_colliders = self.range_query(query_bounds);
 
         let mut j = 0;
         while j < potential_colliders.len() {
+            println!("number of potential colliders: {}", potential_colliders.len());
+            println!("potential collider id: {}", *potential_colliders[j].id);
             let object = *potential_colliders[j];
             // Check if the projectile is inside the object's rectangle
             if is_point_inside_collider(coords.x, coords.y, object) {
@@ -201,10 +210,10 @@ fn spread_bits(ref n: u64) -> u64 {
 
 fn is_point_inside_collider(x: u64, y: u64, collider: Collider) -> bool {
     let offset = 1000;
-    x + offset >= collider.position.x + offset - 500
-        && x <= collider.position.x + 500
-        && y + offset >= collider.position.y + offset - 500
-        && y <= collider.position.y + 500
+    x + offset >= collider.position.x + offset - collider.dimensions.x/2
+        && x <= collider.position.x + collider.dimensions.x/2
+        && y + offset >= collider.position.y + offset - collider.dimensions.y/2
+        && y <= collider.position.y + collider.dimensions.y/2
 }
 
 
@@ -213,11 +222,56 @@ mod quadtree_tests {
 
     use octoguns::types::Vec2;
     use super::interleave_bits;
+    use super::{Quadtree, QuadtreeTrait,Collider, ColliderType};
+    use octoguns::models::map::MapTrait;
+    use octoguns::models::characters::CharacterPosition;
+    use octoguns::types::MapObjects;
 
     #[test]
     fn interleave_test() {
         let res = interleave_bits(Vec2 {x: 50_000, y: 50_000});
     }
+
+    fn test_quadtree_insert() {
+        let address = starknet::contract_address_const::<0x0>();
+        let characters = array![CharacterPosition {id: 1, coords: Vec2 {x: 50_000, y: 50_000}}];
+        let mut map = MapTrait::new(1, MapObjects { objects: array![] });
+        let mut quadtree = QuadtreeTrait::new(1, address, characters, ref map);
+        let collider1 = Collider {id: 1, collider_type: ColliderType::Character(1), position: Vec2 {x: 50_000, y: 50_000}, dimensions: Vec2 {x: 1000, y: 1000}};
+        let collider2 = Collider {id: 1, collider_type: ColliderType::Character(1), position: Vec2 {x: 50_000, y: 50_000}, dimensions: Vec2 {x: 1000, y: 1000}};
+        quadtree.insert(collider1);
+        quadtree.insert(collider2);
+        assert_eq!(quadtree.morton_codes.len(), 2);
+        assert_eq!(quadtree.colliders.len(), 2);
+    }
+
+    fn test_quadtree_init() {
+        let address = starknet::contract_address_const::<0x0>();
+        let characters = array![CharacterPosition {id: 1, coords: Vec2 {x: 50_000, y: 50_000}}];
+        let row = 12*25;
+        let objects: Array<u16> = array![row + 1, row+2, row+3, row+5, row+6, row+7, row+9, row+10, row+ 11, row + 13, row+14, row+15, row+17, row+18, row+19, row+21, row+22, row+ 23];
+        let mut map = MapTrait::new(1, MapObjects { objects });
+        let mut quadtree = QuadtreeTrait::new(1, address, characters, ref map);
+        assert_eq!(quadtree.morton_codes.len(), 2);
+        assert_eq!(quadtree.colliders.len(), 2);
+    }
+
+
+
+    #[test]
+    fn collision_test() {
+        let address = starknet::contract_address_const::<0x0>();
+        let characters = array![CharacterPosition {id: 1, coords: Vec2 {x: 50_000, y: 50_000}}];
+        let row = 12*25;
+        let objects: Array<u16> = array![row + 1, row+2, row+3, row+5, row+6, row+7, row+9, row+10, row+ 11, row + 13, row+14, row+15, row+17, row+18, row+19, row+21, row+22, row+ 23];
+        let mut map = MapTrait::new(1, MapObjects { objects });
+        let mut quadtree = QuadtreeTrait::new(1, address, characters, ref map);
+        let result = quadtree.check_collisions(Vec2 {x: 49_500, y: 49_600});
+        assert_eq!(result.unwrap().id, 1);
+    }
+
+
+
 
 }
 

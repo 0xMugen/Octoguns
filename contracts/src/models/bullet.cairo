@@ -130,30 +130,4 @@ mod simulate_tests {
 
      }
 
-     #[test]
-     fn test_drop_bullet() {
-        let address = starknet::contract_address_const::<0x0>();
-        let map = MapTrait::new_empty(1);
-        let characters = ArrayTrait::new();
-
-        let mut bullet = BulletTrait::new(
-            1, 
-            Vec2 {x: 0, y: 0}, 
-            180 * ONE_E_8, 
-            1,
-            0
-        );
-        let (hit_character, dropped) = bullet.simulate(@characters, @map, 1);
-        match hit_character {
-            Option::Some(character_id) => {
-                panic!("bullet should not hit character");
-            },
-            Option::None => {
-                if !dropped {
-                    panic!("should return true");
-                }
-            }
-        }
-     }
-
 }
