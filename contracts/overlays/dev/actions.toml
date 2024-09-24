@@ -7,5 +7,6 @@ writes = [
     "octoguns-SessionMeta",
     "octoguns-Bullet",
     "octoguns-TurnData",
+    "octoguns-Quadtree"
 
 ]

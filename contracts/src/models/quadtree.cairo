@@ -3,25 +3,57 @@ use octoguns::types::Vec2;
 use alexandria_math::{BitShift, U64BitShift};
 use octoguns::models::characters::CharacterPosition;
 use octoguns::models::bullet::Bullet;
+use octoguns::models::map::{Map, MapTrait};
 use dojo::world::IWorldDispatcher;
-
+use starknet::ContractAddress;
 #[derive(Drop, Serde)]
 #[dojo::model]
 struct Quadtree {
     #[key]
     session_id: u32,
+    #[key]
+    player: ContractAddress,
     morton_codes: Array<u64>,
-    characters: Array<u32>
+    colliders: Array<Collider>
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct Collider {
+    collider_type: ColliderType,
+    postition: Vec2,
+    dimensions: Vec2
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+enum ColliderType {
+    None,
+    Wall,
+    Character: u32,
 }
 
 #[generate_trait]
 impl QuadtreeImpl of QuadtreeTrait {
 
-    fn new(session_id: u32, characters: Array<CharacterPosition>) -> Quadtree {
-        let mut res = Quadtree {session_id, morton_codes: ArrayTrait::new(), characters: ArrayTrait::new()};
+    fn new(session_id: u32, player: ContractAddress, characters: Array<CharacterPosition>, ref map: Map) -> Quadtree {
+        let mut res = Quadtree {session_id, player, morton_codes: ArrayTrait::new(), colliders: ArrayTrait::new()};
         let mut i = 0;
         while i < characters.len() {
-            res.insert(*characters[i]);
+            let collider = Collider {
+                collider_type: ColliderType::Character(*characters[i].id),
+                postition: *characters[i].coords,
+                dimensions: Vec2 {x: 1000, y: 1000}
+            };
+            res.insert(collider);
+            i +=1;
+        };
+        while i < map.objects.len() {
+            let collider = Collider {
+                collider_type: ColliderType::Wall,
+                postition: map.get_object_coords(i),
+                dimensions: Vec2 {x: 4000, y: 4000}
+            };
+            res.insert(collider);
+            i +=1;
         };
         res
     }
@@ -41,58 +73,33 @@ impl QuadtreeImpl of QuadtreeTrait {
     }
 
     // Updated insert method using binary search
-    fn insert(ref self: Quadtree, character: CharacterPosition) {
-        let morton_code = interleave_bits(character.coords);
+    fn insert(ref self: Quadtree, object: Collider) {
+        let morton_code = interleave_bits(object.postition);
         let index = self.find_insert_index(morton_code);
         let mut new_morton_codes = ArrayTrait::new();
-        let mut new_characters = ArrayTrait::new();
+        let mut new_colliders = ArrayTrait::new();
 
         let mut i = 0;
         while i < index {
             new_morton_codes.append(*self.morton_codes[i]);
-            new_characters.append(*self.characters[i]);
+            new_colliders.append(*self.colliders[i]);
             i = i + 1;
         };
 
         new_morton_codes.append(morton_code);
-        new_characters.append(character.id);
+        new_colliders.append(object);
 
         while i < self.morton_codes.len() {
             new_morton_codes.append(*self.morton_codes[i]);
-            new_characters.append(*self.characters[i]);
+            new_colliders.append(*self.colliders[i]);
             i = i + 1;
         };
 
         self.morton_codes = new_morton_codes;
-        self.characters = new_characters;
+        self.colliders = new_colliders;
     }
 
-    // Updated remove method using binary search
-    fn remove(ref self: Quadtree, character: CharacterPosition) {
-        let morton_code = interleave_bits(character.coords);
-        let index = self.find_insert_index(morton_code);
-        let mut new_morton_codes = ArrayTrait::new();
-        let mut new_characters = ArrayTrait::new();
-        let mut i = 0;
-        let len = self.morton_codes.len();
-        let mut removed = false;
-
-        while i < len {
-            if i == index && *self.morton_codes[i] == morton_code && !removed && *self.characters[i] == character.id {
-                removed = true;
-                // Skip adding this object
-            } else {
-                new_morton_codes.append(*self.morton_codes[i]);
-                new_characters.append(*self.characters[i]);
-            }
-            i = i + 1;
-        };
-
-        self.morton_codes = new_morton_codes;
-        self.characters = new_characters;
-    }
-
-    fn range_query(ref self: Quadtree, query_bounds: (u64, u64, u64, u64)) -> Array<u32> {
+    fn range_query(ref self: Quadtree, query_bounds: (u64, u64, u64, u64)) -> Array<Collider> {
         let (min_x, min_y, max_x, max_y) = query_bounds;
         let min_code = interleave_bits( Vec2 {x: min_x, y: min_y});
         let max_code = interleave_bits( Vec2 {x: max_x, y: max_y});
@@ -108,7 +115,7 @@ impl QuadtreeImpl of QuadtreeTrait {
             if *self.morton_codes[i] > max_code {
                 break;
             }
-            result.append(*self.characters[i]);
+            result.append(*self.colliders[i]);
             i += 1;
         };
 
@@ -116,7 +123,7 @@ impl QuadtreeImpl of QuadtreeTrait {
     }
 
     #[inline]
-    fn check_collisions(ref self: Quadtree, coords: Vec2, world: IWorldDispatcher) -> Option<u32> {
+    fn check_collisions(ref self: Quadtree, coords: Vec2, world: IWorldDispatcher) -> Option<Collider> {
         let mut res = Option::None(());
 
         // Define a small range around the projectile's point
@@ -132,10 +139,10 @@ impl QuadtreeImpl of QuadtreeTrait {
 
         let mut j = 0;
         while j < potential_colliders.len() {
-            let object = get!(world, *potential_colliders[j], CharacterPosition);
+            let object = *potential_colliders[j];
             // Check if the projectile is inside the object's rectangle
-            if is_point_inside_character(coords.x, coords.y, object) {
-                res = Option::Some(object.id);
+            if is_point_inside_collider(coords.x, coords.y, object) {
+                res = Option::Some(object);
             }
             j += 1;
         };
@@ -160,12 +167,12 @@ fn spread_bits(ref n: u64) -> u64 {
     x
 }
 
-fn is_point_inside_character(x: u64, y: u64, character: CharacterPosition) -> bool {
+fn is_point_inside_collider(x: u64, y: u64, collider: Collider) -> bool {
     let offset = 1000;
-    x + offset >= character.coords.x + offset - 500
-        && x <= character.coords.x + 500
-        && y + offset >= character.coords.y + offset - 500
-        && y <= character.coords.y + 500
+    x + offset >= collider.postition.x + offset - 500
+        && x <= collider.postition.x + 500
+        && y + offset >= collider.postition.y + offset - 500
+        && y <= collider.postition.y + 500
 }
 
 

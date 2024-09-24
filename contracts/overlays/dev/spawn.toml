@@ -6,6 +6,7 @@ writes = [
     "octoguns-Session",
     "octoguns-SessionMeta",
     "octoguns-Bullet",
-    "octoguns-Player"
+    "octoguns-Player",
+    "octoguns-Quadtree"
 
 ]

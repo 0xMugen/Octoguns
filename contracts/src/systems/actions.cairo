@@ -41,17 +41,20 @@ mod actions {
 
             let mut player_character_id = 0;
             let mut opp_character_id = 0;
+            let mut turn_player = 0;
 
             match session_meta.turn_count % 2 {
                 0 => {
                     assert!(player == session.player1, "not turn player, 1s turn");
                     player_character_id = session_meta.p1_character;
                     opp_character_id = session_meta.p2_character;
+                    turn_player = 1;
                 },
                 1 => {
                     assert!(player == session.player2, "not turn player, 2s turn");
                     player_character_id = session_meta.p2_character;
                     opp_character_id = session_meta.p1_character;
+                    turn_player = 2;
                 },
                 _ => {
                     panic!("???");
@@ -191,6 +194,8 @@ mod actions {
 
             session_meta.turn_count += 1;
             session_meta.bullets = updated_bullet_ids;
+            
+
             set!(world, (session, session_meta));
 
 

@@ -11,6 +11,7 @@ mod spawn {
                                       CharacterPosition,CharacterPositionTrait, 
                                       };
     use octoguns::models::quadtree::{Quadtree, QuadtreeTrait};
+    use octoguns::models::map::{Map, MapTrait};
     use octoguns::types::Vec2;
     use octoguns::lib::default_spawns::{generate_character_positions};
     use starknet::{ContractAddress, get_caller_address};
@@ -40,11 +41,15 @@ mod spawn {
             let p2 = CharacterPositionTrait::new(id2, position_2);
             session_meta.p2_character = id2;                
 
-            let mut positions = array![p1, p2];
-            let quadtree = QuadtreeTrait::new(session.session_id, positions);
+            let mut p1_positions = array![p1];
+            let mut p2_positions = array![p2];
+
+            let mut map = get!(world, session.map_id, (Map));
+            let p1_quadtree = QuadtreeTrait::new(session.session_id, session.player1, p1_positions, ref map);
+            let p2_quadtree = QuadtreeTrait::new(session.session_id, session.player2, p2_positions, ref map);
 
             session.state = 2;
-            set!(world, (session, session_meta, c1, p1, c2, p2, quadtree));
+            set!(world, (session, session_meta, c1, p1, c2, p2, p1_quadtree, p2_quadtree));
         }
     }
 }

@@ -4,7 +4,7 @@ use octoguns::models::characters::{CharacterPosition, CharacterPositionTrait};
 use alexandria_math::trigonometry::{fast_cos, fast_sin};
 use octoguns::consts::ONE_E_8;
 use octoguns::models::map::{Map, MapTrait};
-use octoguns::models::quadtree::{Quadtree, QuadtreeTrait};
+use octoguns::models::quadtree::{Quadtree, QuadtreeTrait, ColliderType, Collider};
 use dojo::world::IWorldDispatcher;
 
 // Tuple to hold bullet_ids and character_ids to drop
@@ -25,8 +25,18 @@ pub fn simulate_bullets(ref bullets: Array<Bullet>, world: IWorldDispatcher, ref
                     Option::Some(v) => {
                         let maybe_collision = quadtree.check_collisions(v, world);
                         match maybe_collision {
-                            Option::Some(id) => {
-                                dead_characters_ids.append(id);
+                            Option::Some(collider) => {
+                                match collider.collider_type {
+                                    ColliderType::Character(id) => {
+                                        dead_characters_ids.append(id);
+                                    },
+                                    ColliderType::Wall => {
+                                        // drop bullet
+                                    },
+                                    _ => {
+                                        // do nothing
+                                    }
+                                }
                             },
                             Option::None => {
                                 updated_bullets.append(bullet.bullet_id);
